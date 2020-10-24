@@ -1,83 +1,9 @@
 //package main
 import java.io.File
+
+import scala.collection.IterableOnce.iterableOnceExtensionMethods
 //import scala.language.postfixOps
-import akka.actor
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 
-case class IndexInvertit(nmappers:Int, nreducers:Int, corpus: List[(File,List[String])])
-case class toMapper(fitxer: File, text: List[String])
-case class fromMapper(intemig: List[(String,File)])
-case class toReducer(word:String, fitxers:List[File])
-case class fromReducer(word:String, fitxers:List[File])
-
-class Master extends Actor {
-  var nmappers = 0 // adaptar per poder tenir menys mappers
-  var mappersPendents = 0
-  var reducersPendents = 0
-  var nreducers = 0 // adaptar per poder tenir menys reducers
-  var nfiles = 0
-  var num_files_mapper = 0
-  var dict = Map[String, List[File]]() withDefault (k => List())
-  var resultatFinal = Map[String, List[File]]()
-
-  def receive: Receive = {
-    case IndexInvertit(nm,nr,c) =>
-      nmappers = nm
-      nreducers = nr
-
-      nfiles = c.length
-      nmappers = nfiles
-      val mappers = for (i <- 0 until nmappers) yield
-        context.actorOf(Props[Mapper], "mapper"+i)
-
-      for(i<- 0 until nmappers) mappers(i) ! toMapper(c(i)._1, c(i)._2)
-      mappersPendents = nmappers
-
-      println("All sent to Mappers")
-
-    case fromMapper(list_string_file) =>
-      for ((word, file) <- list_string_file)
-        dict += (word -> (file :: dict(word)))
-      mappersPendents -= 1
-
-      if (mappersPendents==0)
-        {
-          nreducers = dict.size
-          reducersPendents = nreducers
-          val reducers = for (i <- 0 until nreducers) yield
-            context.actorOf(Props[Reducer], "reducer"+i)
-          for ((i,(key, value)) <-  (0 to nreducers-1) zip dict)
-            reducers(i) ! toReducer(key, value)
-          println("All sent to Reducers")
-        }
-
-
-
-    case fromReducer(s,lf) =>
-      resultatFinal += (s-> lf)
-      reducersPendents -= 1
-      if (reducersPendents == 0) {
-        for ((s,lf)<- resultatFinal) println(s+" -> " + lf)
-        println("All Done from Reducers!")
-      }
-  }
-}
-
-class Mapper extends Actor {
-  def receive: Receive = {
-    case toMapper(fitxer,text)=>
-      sender ! fromMapper(for (word <- text) yield (word, fitxer))
-      println("Work Done by Mapper")
-  }
-}
-
-class Reducer extends Actor {
-  def receive: Receive = {
-    case toReducer(w,lf)=>
-      sender ! fromReducer(w, lf.distinct)
-    println("Work Done by Reducer")
-  }
-}
 
 object Main extends App {
 
@@ -104,12 +30,7 @@ object Main extends App {
 
 
 
-  val systema = ActorSystem("sistema")
-
-  val master = systema.actorOf(Props[Master], name = "master")
-
-  master ! IndexInvertit(nmappers,nreducers, fitxers)
-
+  val inter = (fitxers.toList).map( t => for(w <- t._2) yield (w,t._1))
 
 
   println("tot enviat, esperant... a veure si triga en PACO")
