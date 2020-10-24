@@ -1,8 +1,7 @@
 //package main
 import java.io.File
 //import scala.language.postfixOps
-import akka.actor
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorSystem, Props}
 
 case class IndexInvertit(nmappers:Int, nreducers:Int, corpus: List[(File,List[String])])
 case class toMapper(fitxer: File, text: List[String])
@@ -64,9 +63,11 @@ class Master extends Actor {
 }
 
 class Mapper extends Actor {
+
+  def mapIndex(file: File, words: List[String]): List[(String, File)] =  for (word <- words) yield (word, file)
+
   def receive: Receive = {
-    case toMapper(fitxer,text)=>
-      sender ! fromMapper(for (word <- text) yield (word, fitxer))
+    case toMapper(fitxer, text)=> sender ! fromMapper(mapIndex(fitxer,text))
       println("Work Done by Mapper")
   }
 }
