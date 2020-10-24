@@ -1,4 +1,5 @@
 //package main
+
 import java.io.File
 
 import scala.collection.IterableOnce.iterableOnceExtensionMethods
@@ -18,7 +19,7 @@ object Main extends App {
   val f7 = new java.io.File("f7")
   val f8 = new java.io.File("f8")
 
-  val fitxers = List(
+  val fitxers: List[(File, List[String])] = List(
     (f1, List("hola", "adeu", "per", "palotes", "hola")),
     (f2, List("hola", "adeu", "pericos", "pal", "pal", "pal")),
     (f3, List("que", "tal", "anem", "be")),
@@ -28,9 +29,43 @@ object Main extends App {
     (f7, List("hola", "no", "pas", "adeu")),
     (f8, List("ahh", "molt", "be", "adeu")))
 
+  // Input:  List[(File, List[String])]
+
+  // Part del Mapping:  List[(File, List[String])] => List[List[(String, File)]]
+  // La funció que se li passa al map te per tipus: (File, List[String]) => List[(String, File)]
+
+  def mapping(tupla:(File, List[String])) :List[(String, File)] =
+      tupla match {
+        case (file, words) =>
+          for (word <- words) yield (word, file)
+      }
+
+  // Part del map del MapReduce
+  val inter: List[List[(String, File)]] = fitxers.map(mapping)
+
+  println("------------RESULTAT del MAP --------------")
+  inter.map(println)
+
+  // Part intermitja del MapReduce
+  // Map[String,List[File]]
+  var dict:Map[String,List[File]] = Map().withDefault(k=>List())
+  for( (w, f)<- inter.flatten) dict += (w->(f::dict(w)))
 
 
-  val inter = (fitxers.toList).map( t => for(w <- t._2) yield (w,t._1))
+  // Part del Reducing: Map[String,List[File]] => Map[String,Set[File]]
+
+  // la funció que farà el reducing te per tipus: (String,List[File]) => (String,Set[File])
+  def reducing(tupla:(String,List[File])):(String,Set[File]) =
+    tupla match {
+      case (word, files) => (word, files.toSet)
+    }
+
+  // Es fa un "reducing" a cada element del MAP.
+  var result: Map[String, Set[File]] = dict.map(reducing)
+
+  println("------------- RESULTAT FINAL DEL MAPREDUCE ----------------")
+  // Veiem Com ha quedat el resultat final
+  result.map(println)
 
 
   println("tot enviat, esperant... a veure si triga en PACO")
