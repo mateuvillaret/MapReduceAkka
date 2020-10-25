@@ -20,7 +20,7 @@ object Main extends App {
   val f8 = new java.io.File("f8")
 
   val fitxers: List[(File, List[String])] = List(
-    (f1, List("hola", "adeu", "per", "palotes", "hola")),
+    (f1, List("hola", "adeu", "per", "palotes", "hola","hola", "adeu", "pericos", "pal", "pal", "pal")),
     (f2, List("hola", "adeu", "pericos", "pal", "pal", "pal")),
     (f3, List("que", "tal", "anem", "be")),
     (f4, List("be", "tal", "pericos", "pal")),
@@ -31,37 +31,43 @@ object Main extends App {
 
   // Input:  List[(File, List[String])]
 
-  // Part del Mapping:  List[(File, List[String])] => List[List[(String, File)]]
-  // La funció que se li passa al map te per tipus: (File, List[String]) => List[(String, File)]
+  // Part del Mapping:  List[(File, List[String])] => List[List[(String, Int)]]
 
-  def mapping(tupla:(File, List[String])) :List[(String, File)] =
+  // La funció que se li passa al map per fer el WordCount te per tipus: (File, List[String]) => List[(String, Int)]
+
+  // --------------------------------------------------> Canvi File per Int
+  def mapping(tupla:(File, List[String])) :List[(String, Int)] =
       tupla match {
         case (file, words) =>
-          for (word <- words) yield (word, file)
+          for (word <- words) yield (word, 1) // Canvi file per 1
       }
 
   // Part del map del MapReduce
-  val inter: List[List[(String, File)]] = fitxers.map(mapping)
+  // --------------------------> Canvi de File per Int
+  val inter: List[List[(String, Int)]] = fitxers.map(mapping)
 
   println("------------RESULTAT del MAP --------------")
   inter.map(println)
 
   // Part intermitja del MapReduce
-  // Map[String,List[File]]
-  var dict:Map[String,List[File]] = Map().withDefault(k=>List())
+  // Map[String,List[Int]]
+  // Canvi File per Int ---^>
+  var dict:Map[String,List[Int]] = Map().withDefault(k=>List())
   for( (w, f)<- inter.flatten) dict += (w->(f::dict(w)))
 
+  // Canvi File per Int --------------->   -------------------->
+  // Part del Reducing: Map[String,List[Int]] => Map[String,Set[Int]]
 
-  // Part del Reducing: Map[String,List[File]] => Map[String,Set[File]]
-
-  // la funció que farà el reducing te per tipus: (String,List[File]) => (String,Set[File])
-  def reducing(tupla:(String,List[File])):(String,Set[File]) =
+  // Canvi File per Int --------------------------------------->   -------------------->
+  // la funció que farà el reducing te per tipus: (String,List[Int]) => (String,Set[Int])
+  def reducing(tupla:(String,List[Int])):(String,Int) =
     tupla match {
-      case (word, files) => (word, files.toSet)
+      case (word, nums) => (word, nums.sum)
     }
 
   // Es fa un "reducing" a cada element del MAP.
-  var result: Map[String, Set[File]] = dict.map(reducing)
+  // --------------------> [File] -> Int
+  var result: Map[String, Int] = dict.map(reducing)
 
   println("------------- RESULTAT FINAL DEL MAPREDUCE ----------------")
   // Veiem Com ha quedat el resultat final
