@@ -78,3 +78,10 @@ object Main extends App {
 
 }
 
+// Excerpt from MapReduce paper.
+// We realized that most of our computations involved applying a map operation to each logical “record”
+// in our input in order to compute a set of intermediate key/value pairs, and then
+// applying a reduce operation to all the values that shared the same key, in order to combine the
+// derived data appropriately.
+// Our use of a functional model with userspecified map and reduce operations allows us to parallelize
+// large computations easily
