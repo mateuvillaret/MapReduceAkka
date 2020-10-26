@@ -32,7 +32,6 @@ object Main extends App {
                  reducing: ((String, List[Int])) => (String, Int)) = {
 */
 
-
     def mapReduce[K1,V1,K2,V2,V3](
                  input: List[(K1, List[V1])],
                  mapping: ((K1, List[V1])) => List[(K2, V2)],
@@ -61,7 +60,7 @@ object Main extends App {
       case (word, nums) => (word, nums.sum)
     }
 
-  val resultatWordcount = mapReduce(fitxers, mappingWC, reducingWC )
+  val resultatWordcount: List[(String, Int)] = mapReduce(fitxers, mappingWC, reducingWC )
   println("------------- RESULTAT FINAL DEL MAPREDUCE  pel WordCount ----------------")
   resultatWordcount.map(println)
 
@@ -78,7 +77,7 @@ object Main extends App {
       case (word, files) => (word, files.toSet)
     }
 
-  val resultatInvetedIndex = mapReduce(fitxers, mappingInvInd, reducingInvInd )
+  val resultatInvetedIndex: List[(String, Set[File])] = mapReduce(fitxers, mappingInvInd, reducingInvInd )
   println("------------- RESULTAT FINAL DEL MAPREDUCE  per l'Inverted Index ----------------")
   resultatInvetedIndex.map(println)
 
