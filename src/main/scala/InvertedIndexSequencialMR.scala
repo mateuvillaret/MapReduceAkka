@@ -25,7 +25,7 @@ object Main extends App {
     (f8, List("ahh", "molt", "be", "adeu")))
 
 
-  // SCALA inverded index version
+  // SCALA inverted index version
 
   val flattenedInvertedInput: List[(String, File)] = for ((file, lwords) <- fitxers; word <- lwords) yield (word, file)
   //Versio desugared anonymous functions
@@ -40,7 +40,7 @@ object Main extends App {
 
   println("---------------------------------")
 
-
+  // SCALA inverted index version a la map reduce
   // Input:  List[(File, List[String])]
 
   // Part del Mapping:  List[(File, List[String])] => List[List[(String, File)]]
