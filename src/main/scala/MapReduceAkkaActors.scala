@@ -136,9 +136,27 @@ object Main extends App {
 
   val systema = ActorSystem("sistema")
 
-  val master = systema.actorOf(Props(new MapReduce[File,String,String,File,Set[File]](fitxers,mappingInvInd,reducingInvInd,10,10 )), name = "master")
+ // val indexinvertit = systema.actorOf(Props(new MapReduce[File,String,String,File,Set[File]](fitxers,mappingInvInd,reducingInvInd,10,10 )), name = "master")
 
- // master ! IndexInvertit(nmappers,nreducers, fitxers)
+  def mappingWC(tupla:(File, List[String])) :List[(String, Int)] =
+    tupla match {
+      case (file, words) =>
+        for (word <- words) yield (word, 1) // Canvi file per 1
+    }
+
+  def reducingWC(tupla:(String,List[Int])):(String,Int) =
+    tupla match {
+      case (word, nums) => (word, nums.sum)
+    }
+
+
+  val wordcount = systema.actorOf(Props(new MapReduce[File,String,String,Int,Int](fitxers,mappingWC,reducingWC,10,10 )), name = "master")
+
+
+
+
+
+  // master ! IndexInvertit(nmappers,nreducers, fitxers)
 
 
 
