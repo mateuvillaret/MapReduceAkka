@@ -1,9 +1,5 @@
-//package main
-
 import java.io.File
 
-import scala.collection.IterableOnce.iterableOnceExtensionMethods
-//import scala.language.postfixOps
 
 
 object Main extends App {
