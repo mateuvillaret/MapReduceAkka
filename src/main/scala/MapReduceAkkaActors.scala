@@ -1,9 +1,5 @@
-//package main
 
 import java.io.File
-
-import scala.collection.IterableOnce.iterableOnceExtensionMethods
-//import scala.language.postfixOps
 
 
 object Main extends App {
@@ -52,6 +48,7 @@ object Main extends App {
 
   }
 
+// ------------- WORD COUNT ----------------
 
   def mappingWC(tupla:(File, List[String])) :List[(String, Int)] =
     tupla match {
@@ -67,9 +64,44 @@ object Main extends App {
   val resultatWordcount = mapReduce(fitxers, mappingWC, reducingWC )
   println("------------- RESULTAT FINAL DEL MAPREDUCE  pel WordCount ----------------")
   resultatWordcount.map(println)
+
+
+// ------------- INVERTED INDEX -------------
+  def mappingInvInd(tupla:(File, List[String])) :List[(String, File)] =
+    tupla match {
+      case (file, words) =>
+        for (word <- words) yield (word, file)
+    }
+
+  def reducingInvInd(tupla:(String,List[File])):(String,Set[File]) =
+    tupla match {
+      case (word, files) => (word, files.toSet)
+    }
+
+  val resultatInvetedIndex = mapReduce(fitxers, mappingInvInd, reducingInvInd )
+  println("------------- RESULTAT FINAL DEL MAPREDUCE  per l'Inverted Index ----------------")
+  resultatInvetedIndex.map(println)
+
+
+
+
+
+
+
+
   println("Fi!")
 
 }
+
+
+
+
+
+
+
+
+
+
 
 /*
 
