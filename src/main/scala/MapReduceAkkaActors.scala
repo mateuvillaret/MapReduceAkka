@@ -10,15 +10,19 @@ case class fromMapper(intemig: List[(String,File)])
 case class toReducer(word:String, fitxers:List[File])
 case class fromReducer(word:String, fitxers:List[File])
 
-class Master extends Actor {
+
+class MapReduce[K1,V1,K2,V2,V3](
+                                 input:List[(K1,List[V1])],
+                                 mapping:((K1,List[V1])) => (K2,V2),
+                                 reducing:((K2,List[V2]))=> (K2,V3)) extends Actor {
   var nmappers = 0 // adaptar per poder tenir menys mappers
   var mappersPendents = 0
   var reducersPendents = 0
   var nreducers = 0 // adaptar per poder tenir menys reducers
   var nfiles = 0
   var num_files_mapper = 0
-  var dict = Map[String, List[File]]() withDefault (k => List())
-  var resultatFinal = Map[String, List[File]]()
+  var dict = Map[K1, List[V1]]() withDefault (k => List())
+  var resultatFinal = Map[K2, List[V3]]()
 
   def receive: Receive = {
     case IndexInvertit(nm,nr,c) =>
