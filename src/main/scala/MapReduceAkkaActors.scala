@@ -15,20 +15,21 @@ case class fromReducer[K2,V3](finals: (K2,V3))
 
 class Mapper[K1,V1,K2,V2](mapping:((K1,List[V1])) => List[(K2,V2)]) extends Actor {
   def receive: Receive = {
-    case toMapper(clau,valor)=>
-      val kk =mapping((clau,valor))
+        // cal anotar clau:K1 i valor:List[V1] per tal d'instanciar adequadament el missatge toMapper amb les variables de tipus de Mapper
+    case toMapper(clau:K1,valor:List[V1])=>
       sender ! fromMapper(mapping((clau,valor)))
       println("Work Done by Mapper")
   }
 }
 
-class Reducer extends Actor {
+class Reducer[K2,V2,V3](reducing:((K2,List[V2]))=> (K2,V3)) extends Actor {
   def receive: Receive = {
-    case toReducer(w,lf)=>
+    case toReducer(w:K2,lf:List[V2])=>
       sender ! fromReducer(reducing(w, lf))
       println("Work Done by Reducer")
   }
 }
+
 class MapReduce[K1,V1,K2,V2,V3](
                                  input:List[(K1,List[V1])],
                                  mapping:((K1,List[V1])) => List[(K2,V2)],
@@ -58,7 +59,7 @@ class MapReduce[K1,V1,K2,V2,V3](
   println("Going to create MAPPERS!!")
 
   val mappers = for (i <- 0 until nmappers) yield
-    context.actorOf(Props[Mapper], "mapper"+i)
+    context.actorOf(Props(new Mapper[K1,V1,K2,V2](mapping)), "mapper"+i)
 
   for(i<- 0 until nmappers) mappers(i) ! toMapper(input(i)._1:K1, input(i)._2: List[V1])
   mappersPendents = nmappers
@@ -69,7 +70,7 @@ class MapReduce[K1,V1,K2,V2,V3](
 
 
     case fromMapper(list_string_file) =>
-      for ((word, file) <- list_string_file)
+      for ((word:K2, file:V2) <- list_string_file)
         dict += (word -> (file :: dict(word)))
       mappersPendents -= 1
 
@@ -78,13 +79,13 @@ class MapReduce[K1,V1,K2,V2,V3](
           nreducers = dict.size
           reducersPendents = nreducers
           val reducers = for (i <- 0 until nreducers) yield
-            context.actorOf(Props[Reducer], "reducer"+i)
+            context.actorOf(Props(new Reducer[K2,V2,V3](reducing)), "reducer"+i)
           for ((i,(key, value)) <-  (0 to nreducers-1) zip dict)
             reducers(i) ! toReducer(key, value)
           println("All sent to Reducers")
         }
 
-    case fromReducer(entradaDictionari) =>
+    case fromReducer(entradaDictionari:(K2,V3)) =>
       resultatFinal += (entradaDictionari._1 -> entradaDictionari._2 )
       reducersPendents -= 1
       if (reducersPendents == 0) {
