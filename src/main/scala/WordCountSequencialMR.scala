@@ -1,9 +1,4 @@
-//package main
-
 import java.io.File
-
-import scala.collection.IterableOnce.iterableOnceExtensionMethods
-//import scala.language.postfixOps
 
 
 object Main extends App {
@@ -79,6 +74,7 @@ object Main extends App {
 }
 
 // Excerpt from MapReduce paper.
+
 // We realized that most of our computations involved applying a map operation to each logical “record”
 // in our input in order to compute a set of intermediate key/value pairs, and then
 // applying a reduce operation to all the values that shared the same key, in order to combine the
