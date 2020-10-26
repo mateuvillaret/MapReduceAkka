@@ -10,18 +10,34 @@ case class IndexInvertit(nmappers:Int, nreducers:Int, corpus: List[(File,List[St
 
 class MapReduce[K1,V1,K2,V2,V3](
                                  input:List[(K1,List[V1])],
-                                 mapping:((K1,List[V1])) => (K2,V2),
+                                 mapping:((K1,List[V1])) => List[(K2,V2)],
                                  reducing:((K2,List[V2]))=> (K2,V3),
                                   nm: Int,
                                   nr: Int) extends Actor {
 
 
   case class toMapper(fitxer: K1, text: List[V1])
-  case class fromMapper(intemig: List[(K2,V2)])
+  case class fromMapper(intermig: List[(K2,V2)])
   case class toReducer(word:K2, fitxers:List[V2])
-  case class fromReducer(word:K2, fitxers:V3)
+  case class fromReducer(finals: (K2,V3))
 
 
+
+  class Mapper extends Actor {
+    def receive: Receive = {
+      case toMapper(fitxer,text)=>
+        sender ! fromMapper(mapping(fitxer,text))
+        println("Work Done by Mapper")
+    }
+  }
+
+  class Reducer extends Actor {
+    def receive: Receive = {
+      case toReducer(w,lf)=>
+        sender ! fromReducer(reducing(w, lf))
+        println("Work Done by Reducer")
+    }
+  }
 
   var nmappers = 0 // adaptar per poder tenir menys mappers
   var mappersPendents = 0
@@ -67,8 +83,8 @@ class MapReduce[K1,V1,K2,V2,V3](
 
 
 
-    case fromReducer(s,lf) =>
-      resultatFinal += (s-> lf)
+    case fromReducer(entradaDictionari) =>
+      resultatFinal += (entradaDictionari._1 -> entradaDictionari._2 )
       reducersPendents -= 1
       if (reducersPendents == 0) {
         for ((s,lf)<- resultatFinal) println(s+" -> " + lf)
@@ -77,22 +93,6 @@ class MapReduce[K1,V1,K2,V2,V3](
   }
 
 
-
-  class Mapper extends Actor {
-    def receive: Receive = {
-      case toMapper(fitxer,text)=>
-        sender ! fromMapper(mapping(fitxer,text))
-        println("Work Done by Mapper")
-    }
-  }
-
-  class Reducer extends Actor {
-    def receive: Receive = {
-      case toReducer(w,lf)=>
-        sender ! fromReducer(w, lf.distinct)
-        println("Work Done by Reducer")
-    }
-  }
 
 }
 
@@ -121,13 +121,22 @@ object Main extends App {
     (f7, List("hola", "no", "pas", "adeu")),
     (f8, List("ahh", "molt", "be", "adeu")))
 
+  def mappingInvInd(tupla:(File, List[String])) :List[(String, File)] =
+    tupla match {
+      case (file, words) =>
+        for (word <- words) yield (word, file)
+    }
 
+  def reducingInvInd(tupla:(String,List[File])):(String,Set[File]) =
+    tupla match {
+      case (word, files) => (word, files.toSet)
+    }
 
   val systema = ActorSystem("sistema")
 
-  val master = systema.actorOf(Props[Master], name = "master")
+  val master = systema.actorOf(Props(new MapReduce[File,String,String,File,Set[File]](fitxers,mappingInvInd,reducingInvInd,10,10 )), name = "master")
 
-  master ! IndexInvertit(nmappers,nreducers, fitxers)
+ // master ! IndexInvertit(nmappers,nreducers, fitxers)
 
 
 
