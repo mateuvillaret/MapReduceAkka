@@ -6,8 +6,29 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 
 
 // no caldrà... serà l'actor.
-case class IndexInvertit(nmappers:Int, nreducers:Int, corpus: List[(File,List[String])])
+case class toMapper[K1,V1](fitxer: K1, text: List[V1])
+case class fromMapper[K2,V2](intermig: List[(K2,V2)])
+case class toReducer[K2,V2](word:K2, fitxers:List[V2])
+case class fromReducer[K2,V3](finals: (K2,V3))
 
+
+
+class Mapper[K1,V1,K2,V2](mapping:((K1,List[V1])) => List[(K2,V2)]) extends Actor {
+  def receive: Receive = {
+    case toMapper(clau,valor)=>
+      val kk =mapping((clau,valor))
+      sender ! fromMapper(mapping((clau,valor)))
+      println("Work Done by Mapper")
+  }
+}
+
+class Reducer extends Actor {
+  def receive: Receive = {
+    case toReducer(w,lf)=>
+      sender ! fromReducer(reducing(w, lf))
+      println("Work Done by Reducer")
+  }
+}
 class MapReduce[K1,V1,K2,V2,V3](
                                  input:List[(K1,List[V1])],
                                  mapping:((K1,List[V1])) => List[(K2,V2)],
@@ -16,28 +37,7 @@ class MapReduce[K1,V1,K2,V2,V3](
                                   nr: Int) extends Actor {
 
 
-  case class toMapper(fitxer: K1, text: List[V1])
-  case class fromMapper(intermig: List[(K2,V2)])
-  case class toReducer(word:K2, fitxers:List[V2])
-  case class fromReducer(finals: (K2,V3))
 
-
-
-  class Mapper extends Actor {
-    def receive: Receive = {
-      case toMapper(fitxer,text)=>
-        sender ! fromMapper(mapping(fitxer,text))
-        println("Work Done by Mapper")
-    }
-  }
-
-  class Reducer extends Actor {
-    def receive: Receive = {
-      case toReducer(w,lf)=>
-        sender ! fromReducer(reducing(w, lf))
-        println("Work Done by Reducer")
-    }
-  }
 
   var nmappers = 0 // adaptar per poder tenir menys mappers
   var mappersPendents = 0
@@ -55,6 +55,8 @@ class MapReduce[K1,V1,K2,V2,V3](
   // nmappers = nm
   nreducers = nr
 
+  println("Going to create MAPPERS!!")
+
   val mappers = for (i <- 0 until nmappers) yield
     context.actorOf(Props[Mapper], "mapper"+i)
 
@@ -62,6 +64,7 @@ class MapReduce[K1,V1,K2,V2,V3](
   mappersPendents = nmappers
 
   println("All sent to Mappers")
+
   def receive: Receive = {
 
 
@@ -80,8 +83,6 @@ class MapReduce[K1,V1,K2,V2,V3](
             reducers(i) ! toReducer(key, value)
           println("All sent to Reducers")
         }
-
-
 
     case fromReducer(entradaDictionari) =>
       resultatFinal += (entradaDictionari._1 -> entradaDictionari._2 )
