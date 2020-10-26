@@ -20,7 +20,7 @@ object Main extends App {
   val f8 = new java.io.File("f8")
 
   val fitxers: List[(File, List[String])] = List(
-    (f1, List("hola", "adeu", "per", "palotes", "hola","hola", "adeu", "pericos", "pal", "pal", "pal")),
+    (f1, List("hola", "adeu", "per", "palotes", "hola", "hola", "adeu", "pericos", "pal", "pal", "pal")),
     (f2, List("hola", "adeu", "pericos", "pal", "pal", "pal")),
     (f3, List("que", "tal", "anem", "be")),
     (f4, List("be", "tal", "pericos", "pal")),
@@ -28,6 +28,51 @@ object Main extends App {
     (f6, List("quin", "hola", "vols", "dir")),
     (f7, List("hola", "no", "pas", "adeu")),
     (f8, List("ahh", "molt", "be", "adeu")))
+
+
+ /* def mapReduce(
+                 input: List[(File, List[String])],
+                 mapping: ((File, List[String])) => List[(String, Int)],
+                 reducing: ((String, List[Int])) => (String, Int)) = {
+*/
+
+
+    def mapReduce[K1,V1,K2,V2,V3](
+                 input: List[(K1, List[V1])],
+                 mapping: ((K1, List[V1])) => List[(K2, V2)],
+                 reducing: ((K2, List[V2])) => (K2, V3)): List[(K2,V3)] = {
+
+    val inter: List[List[(K2, V2)]] = input.map(mapping)
+
+    var dict: Map[K2, List[V2]] = Map().withDefault(k => List())
+    for ((w, f) <- inter.flatten) dict += (w -> (f :: dict(w)))
+
+    val result: List[(K2, V3)] = dict.toList.map(reducing)
+    result
+
+  }
+
+
+  def mappingWC(tupla:(File, List[String])) :List[(String, Int)] =
+    tupla match {
+      case (file, words) =>
+        for (word <- words) yield (word, 1) // Canvi file per 1
+    }
+
+  def reducingWC(tupla:(String,List[Int])):(String,Int) =
+    tupla match {
+      case (word, nums) => (word, nums.sum)
+    }
+
+  val resultatWordcount = mapReduce(fitxers, mappingWC, reducingWC )
+  println("------------- RESULTAT FINAL DEL MAPREDUCE  pel WordCount ----------------")
+  resultatWordcount.map(println)
+  println("Fi!")
+
+}
+
+/*
+
 
   // Input:  List[(File, List[String])]
 
@@ -77,6 +122,8 @@ object Main extends App {
   println("tot enviat, esperant... a veure si triga en PACO")
 
 }
+
+ */
 
 // Excerpt from MapReduce paper.
 // We realized that most of our computations involved applying a map operation to each logical “record”
