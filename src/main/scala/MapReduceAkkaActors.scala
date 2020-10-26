@@ -113,8 +113,8 @@ object Main extends App {
   val f7 = new java.io.File("f7")
   val f8 = new java.io.File("f8")
 
-  val fitxers = List(
-    (f1, List("hola", "adeu", "per", "palotes", "hola")),
+  val fitxers: List[(File, List[String])] = List(
+    (f1, List("hola", "adeu", "per", "palotes", "hola","hola", "adeu", "pericos", "pal", "pal", "pal")),
     (f2, List("hola", "adeu", "pericos", "pal", "pal", "pal")),
     (f3, List("que", "tal", "anem", "be")),
     (f4, List("be", "tal", "pericos", "pal")),
