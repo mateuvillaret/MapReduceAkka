@@ -42,11 +42,9 @@ object Main extends App {
   println( "---------------------------------")
 
 
-
-
+  // SCALA à la MapReduce index version
 
   // Input:  List[(File, List[String])]
-
   // Part del Mapping:  List[(File, List[String])] => List[List[(String, File)]]
   // La funció que se li passa al map te per tipus: (File, List[String]) => List[(String, File)]
 
@@ -69,7 +67,6 @@ object Main extends App {
 
 
   // Part del Reducing: Map[String,List[File]] => Map[String,Set[File]]
-
   // la funció que farà el reducing te per tipus: (String,List[File]) => (String,Set[File])
   def reducing(tupla:(String,List[File])):(String,Set[File]) =
     tupla match {
