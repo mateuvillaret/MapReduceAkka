@@ -55,11 +55,11 @@ object Main extends App {
   var dict:Map[String,List[Int]] = Map().withDefault(k=>List())
   for( (w, f)<- inter.flatten) dict += (w->(f::dict(w)))
 
-  // Canvi File per Int --------------->   -------------------->
-  // Part del Reducing: Map[String,List[Int]] => Map[String,Set[Int]]
+  // Canvi [File] per Int --------------->   -------------------->
+  // Part del Reducing: Map[String,List[Int]] => Map[String,Int]
 
-  // Canvi File per Int --------------------------------------->   -------------------->
-  // la funció que farà el reducing te per tipus: (String,List[Int]) => (String,Set[Int])
+  // Canvi File per Int  i [File] per Int ----------------->   -------------->
+  // la funció que farà el reducing te per tipus: (String,List[Int]) => (String,Int)
   def reducing(tupla:(String,List[Int])):(String,Int) =
     tupla match {
       case (word, nums) => (word, nums.sum)
