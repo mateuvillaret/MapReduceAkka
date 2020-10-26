@@ -1,7 +1,6 @@
 import java.io.File
 
 
-
 object Main extends App {
 
   val nmappers = 4
@@ -26,23 +25,20 @@ object Main extends App {
     (f8, List("ahh", "molt", "be", "adeu")))
 
 
-
   // SCALA inverded index version
 
-  val flattenedInvertedInput: List[(File, String)] =
-    for((file,lwords)<- fitxers; word <- lwords) yield (file,word)
+  val flattenedInvertedInput: List[(String, File)] = for ((file, lwords) <- fitxers; word <- lwords) yield (word, file)
+  //Versio desugared anonymous functions
+  val resultPlain: Map[String, List[(String, File)]] = flattenedInvertedInput.groupBy({ case ( w: String,f: File) => w })
+  val resultPlainFinal: Map[String, Set[String]] = resultPlain.map(  { case (w,lfs) => (w, lfs.map(_._1).toSet)})
 
-  val resultPlain: Map[String, List[(File, String)]] = flattenedInvertedInput.groupBy(_._2)
-
-  val resultPlainFinal: Map[String, Set[File]] = resultPlain.map(x=> (x._1, x._2.map(_._1).toSet) )
-
+  //Versio alternativa anonymous functions
+  //val resultPlain = flattenedInvertedInput.groupBy(_._1)
+  //val resultPlainFinal: Map[String, Set[File]] = resultPlain.map(x => (x._1, x._2.map(_._1).toSet))
 
   resultPlainFinal.map(println)
 
-  println( "---------------------------------")
-
-
-
+  println("---------------------------------")
 
 
   // Input:  List[(File, List[String])]
@@ -50,11 +46,11 @@ object Main extends App {
   // Part del Mapping:  List[(File, List[String])] => List[List[(String, File)]]
   // La funció que se li passa al map te per tipus: (File, List[String]) => List[(String, File)]
 
-  def mapping(tupla:(File, List[String])) :List[(String, File)] =
-      tupla match {
-        case (file, words) =>
-          for (word <- words) yield (word, file)
-      }
+  def mapping(tupla: (File, List[String])): List[(String, File)] =
+    tupla match {
+      case (file, words) =>
+        for (word <- words) yield (word, file)
+    }
 
   // Part del map del MapReduce
   val inter: List[List[(String, File)]] = fitxers.map(mapping)
@@ -64,14 +60,14 @@ object Main extends App {
 
   // Part intermitja del MapReduce
   // Map[String,List[File]]
-  var dict:Map[String,List[File]] = Map().withDefault(k=>List())
-  for( (w, f)<- inter.flatten) dict += (w->(f::dict(w)))
+  var dict: Map[String, List[File]] = Map().withDefault(k => List())
+  for ((w, f) <- inter.flatten) dict += (w -> (f :: dict(w)))
 
 
   // Part del Reducing: Map[String,List[File]] => Map[String,Set[File]]
 
   // la funció que farà el reducing te per tipus: (String,List[File]) => (String,Set[File])
-  def reducing(tupla:(String,List[File])):(String,Set[File]) =
+  def reducing(tupla: (String, List[File])): (String, Set[File]) =
     tupla match {
       case (word, files) => (word, files.toSet)
     }
