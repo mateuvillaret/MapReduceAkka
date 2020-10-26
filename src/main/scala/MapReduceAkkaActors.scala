@@ -4,40 +4,50 @@ import java.io.File
 import akka.actor
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 
-case class IndexInvertit(nmappers:Int, nreducers:Int, corpus: List[(File,List[String])])
-case class toMapper(fitxer: File, text: List[String])
-case class fromMapper(intemig: List[(String,File)])
-case class toReducer(word:String, fitxers:List[File])
-case class fromReducer(word:String, fitxers:List[File])
 
+// no caldrà... serà l'actor.
+case class IndexInvertit(nmappers:Int, nreducers:Int, corpus: List[(File,List[String])])
 
 class MapReduce[K1,V1,K2,V2,V3](
                                  input:List[(K1,List[V1])],
                                  mapping:((K1,List[V1])) => (K2,V2),
-                                 reducing:((K2,List[V2]))=> (K2,V3)) extends Actor {
+                                 reducing:((K2,List[V2]))=> (K2,V3),
+                                  nm: Int,
+                                  nr: Int) extends Actor {
+
+
+  case class toMapper(fitxer: K1, text: List[V1])
+  case class fromMapper(intemig: List[(K2,V2)])
+  case class toReducer(word:K2, fitxers:List[V2])
+  case class fromReducer(word:K2, fitxers:V3)
+
+
+
   var nmappers = 0 // adaptar per poder tenir menys mappers
   var mappersPendents = 0
   var reducersPendents = 0
   var nreducers = 0 // adaptar per poder tenir menys reducers
   var nfiles = 0
   var num_files_mapper = 0
-  var dict = Map[K1, List[V1]]() withDefault (k => List())
-  var resultatFinal = Map[K2, List[V3]]()
+  var dict = Map[K2, List[V2]]() withDefault (k => List())
+  var resultatFinal = Map[K2, V3]()
 
+
+
+  nfiles = input.length
+  nmappers = nfiles
+  // nmappers = nm
+  nreducers = nr
+
+  val mappers = for (i <- 0 until nmappers) yield
+    context.actorOf(Props[Mapper], "mapper"+i)
+
+  for(i<- 0 until nmappers) mappers(i) ! toMapper(input(i)._1:K1, input(i)._2: List[V1])
+  mappersPendents = nmappers
+
+  println("All sent to Mappers")
   def receive: Receive = {
-    case IndexInvertit(nm,nr,c) =>
-      nmappers = nm
-      nreducers = nr
 
-      nfiles = c.length
-      nmappers = nfiles
-      val mappers = for (i <- 0 until nmappers) yield
-        context.actorOf(Props[Mapper], "mapper"+i)
-
-      for(i<- 0 until nmappers) mappers(i) ! toMapper(c(i)._1, c(i)._2)
-      mappersPendents = nmappers
-
-      println("All sent to Mappers")
 
     case fromMapper(list_string_file) =>
       for ((word, file) <- list_string_file)
@@ -65,23 +75,28 @@ class MapReduce[K1,V1,K2,V2,V3](
         println("All Done from Reducers!")
       }
   }
+
+
+
+  class Mapper extends Actor {
+    def receive: Receive = {
+      case toMapper(fitxer,text)=>
+        sender ! fromMapper(mapping(fitxer,text))
+        println("Work Done by Mapper")
+    }
+  }
+
+  class Reducer extends Actor {
+    def receive: Receive = {
+      case toReducer(w,lf)=>
+        sender ! fromReducer(w, lf.distinct)
+        println("Work Done by Reducer")
+    }
+  }
+
 }
 
-class Mapper extends Actor {
-  def receive: Receive = {
-    case toMapper(fitxer,text)=>
-      sender ! fromMapper(for (word <- text) yield (word, fitxer))
-      println("Work Done by Mapper")
-  }
-}
 
-class Reducer extends Actor {
-  def receive: Receive = {
-    case toReducer(w,lf)=>
-      sender ! fromReducer(w, lf.distinct)
-    println("Work Done by Reducer")
-  }
-}
 
 object Main extends App {
 
