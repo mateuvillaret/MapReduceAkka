@@ -24,6 +24,25 @@ object Main extends App {
     (f7, List("hola", "no", "pas", "adeu")),
     (f8, List("ahh", "molt", "be", "adeu")))
 
+
+  // SCALA inverded index version
+
+  val flattenedInvertedInput: List[(File, String)] =
+    for((file,lwords)<- fitxers; word <- lwords) yield (file,word)
+
+  val resultPlain: Map[String, List[(File, String)]] = flattenedInvertedInput.groupBy(_._2)
+
+  val resultPlainFinal: Map[String, Set[File]] = resultPlain.map(x=> (x._1, x._2.map(_._1).toSet) )
+
+
+  resultPlainFinal.map(println)
+
+  println( "---------------------------------")
+
+
+  // SCALA-MapReduce-like inverded index version
+
+
   // Input:  List[(File, List[String])]
 
   // Part del Mapping:  List[(File, List[String])] => List[List[(String, Int)]]
@@ -80,4 +99,4 @@ object Main extends App {
 // applying a reduce operation to all the values that shared the same key, in order to combine the
 // derived data appropriately.
 // Our use of a functional model with userspecified map and reduce operations allows us to parallelize
-// large computations easily
+// large computations easily...
