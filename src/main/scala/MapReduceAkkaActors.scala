@@ -20,7 +20,7 @@ class Mapper[K1,V1,K2,V2](mapping:((K1,List[V1])) => List[(K2,V2)]) extends Acto
         // Compte, que no us enganyi que hagi donat els mateixos noms a les variables de tipus al Mapper que a les case class de fora. S'han
         // de vincular d'alguna manera perquè sinó l'inferidor de tipus no sap a quin dels paràmetres de tipus del mapper correspon el tipus de la clau
         // i el tipus del valor al missatge toMapper
-    case toMapper(clau:K1,valor:List[V1])=>
+case toMapper(clau:K1,valor:List[V1])=>
       sender ! fromMapper(mapping((clau,valor)))
       // xivato per seguir l'evolució
       // println("Work Done by Mapper")
@@ -39,34 +39,31 @@ class Reducer[K2,V2,V3](reducing:((K2,List[V2]))=> (K2,V3)) extends Actor {
 
 
 
-// l'Actor MapReduce és polimòrfic amb els tipus de les claus valor de l'entrada [K1,V1], la clau i valor intermitjos [k2,v2]
+// L'Actor MapReduce és polimòrfic amb els tipus de les claus valor de l'entrada [K1,V1], la clau i valor intermitjos [k2,v2]
 // i la clau i valor finals [K2,V3].
-// input és el paràmetre d'entrada (compte perquè depedent de la mida pot ser un problema)
-// mapping és la funció dels mappers
-// reducing és la funció dels reducers
+// - input és el paràmetre d'entrada (compte perquè depedent de la mida pot ser un problema)
+// - mapping és la funció dels mappers
+// - reducing és la funció dels reducers
 class MapReduce[K1,V1,K2,V2,V3](
                                  input:List[(K1,List[V1])],
                                  mapping:((K1,List[V1])) => List[(K2,V2)],
                                  reducing:((K2,List[V2]))=> (K2,V3)) extends Actor {
 
-
-
-
   var nmappers = 0 // adaptar per poder tenir menys mappers
   var mappersPendents = 0
   var nreducers = 0 // adaptar per poder tenir menys reducers
   var reducersPendents = 0
-  var nchunks = 0
+
   var num_files_mapper = 0
   // dict serà el diccionari amb el resultat intermedi
-  var dict = Map[K2, List[V2]]() withDefault (k => List())
+  var dict = Map[K2, List[V2]]() withDefaultValue(List())
   // resultatFinal recollirà les respostes finals dels reducers
   var resultatFinal = Map[K2, V3]()
 
 
   // farem un mapper per parella (K1,List[V1]) de l'input
-  nchunks = input.length
-  nmappers = nchunks
+
+  nmappers = input.length
 
   println("Going to create MAPPERS!!")
 
@@ -75,15 +72,23 @@ class MapReduce[K1,V1,K2,V2,V3](
   // D'altra banda, quan els actors que creen tenen un contructor amb paràmetre, no passem el "tipus" de l'actor i prou
   // a Props sino que creem l'actor amb els paràmetres que necessita. En aquest cas, l'Actor mapping és paramètric en tipus
   // i necessita com a paràmetre una funció de mapping.
-  val mappers = for (i <- 0 until nmappers) yield
-    context.actorOf(Props(new Mapper[K1,V1,K2,V2](mapping)), "mapper"+i)
 
-  // posar les anotacions de tipus aquí no és necessari però ajuda a llegir
+  val mappers = for (i <- 0 until nmappers) yield {
+    context.actorOf(Props(new Mapper(mapping)), "mapper" + i)
+  }
+  // No és necessari passar els tipus K1,V1, ... ja que els infereix SCALA pel paràmetre mapping
+  // D'altra banda compte pq  "0 until n" és el mateix que "0 to n-1".
+  // val mappers = for (i <- 0 to nmappers-1) yield {
+  //      context.actorOf(Props(new Mapper[K1,V1,K2,V2](mapping)), "mapper"+i)
+  // }
+
+  // Posar les anotacions de tipus aquí no és necessari però ajuda a llegir que
   // a cada mapper li enviem una clau de tipus K1 i una llista de valors de tipus V1
   for(i<- 0 until nmappers) mappers(i) ! toMapper(input(i)._1:K1, input(i)._2: List[V1])
+  // Per tant, alternativament...
   // for(i<- 0 until nmappers) mappers(i) ! toMapper(input(i)._1, input(i)._2)
 
-  // necessitem controlar quant s'han acabat tots els mappers per poder llençar els reducers després...
+  // Necessitem controlar quant s'han acabat tots els mappers per poder llençar els reducers després...
   mappersPendents = nmappers
 
   println("All sent to Mappers, now start listening...")
@@ -92,9 +97,9 @@ class MapReduce[K1,V1,K2,V2,V3](
   def receive: Receive = {
 
         // Anem rebent les respostes dels mappers i les agrupem al diccionari per clau.
-        // De nou ens cal etiquetar el tipus de la clau i el valor, sinó no es pot inferir... però ara ho fem
-        // en el paràmetre del missatge directament. (comentat al for més envall, la versió alternativa).
 
+    // Tornem a necessitar anotar els tipus del paràmetre que reb fromMapper tal com ho hem fet
+    // o be en el codi comentat al generar les tuples.
     case fromMapper(list_clau_valor:List[(K2,V2)]) =>
       //for ((word:K2, file:V2) <- list_string_file)
         for ((clau, valor) <- list_clau_valor)
@@ -102,7 +107,7 @@ class MapReduce[K1,V1,K2,V2,V3](
       // Ja falta un mapper menys...
       mappersPendents -= 1
 
-      // quan ja hem rebut tots els missatges dels mappers:
+      // Quan ja hem rebut tots els missatges dels mappers:
       if (mappersPendents==0)
         {
           // creem els reducers, tants com entrades al diccionari; fixeu-vos de nou que fem servir context i fem el new
@@ -110,17 +115,18 @@ class MapReduce[K1,V1,K2,V2,V3](
           nreducers = dict.size
           reducersPendents = nreducers
           val reducers = for (i <- 0 until nreducers) yield
-            context.actorOf(Props(new Reducer[K2,V2,V3](reducing)), "reducer"+i)
+            //context.actorOf(Props(new Reducer[K2,V2,V3](reducing)), "reducer"+i)
+          context.actorOf(Props(new Reducer(reducing)), "reducer"+i)
 
-          // ara enviem a cada reducer una clau de tipus V2 i una llista de valors de tipus K2. Les anotacions de tipus
-          // no calen
+          // Ara enviem a cada reducer una clau de tipus V2 i una llista de valors de tipus K2. Les anotacions de tipus
+          // no caldrien perquè ja sabem de quin tipus és dict.
           for ((i,(key:K2, lvalue:List[V2])) <-  (0 to nreducers-1) zip dict)
             reducers(i) ! toReducer(key, lvalue)
           println("All sent to Reducers")
         }
 
-      // a mesura que anem rebent respostes del reducer (tuples K2, V3) les anem afegint al Map del resultatfinal i
-      // descomptem reducers pendents
+      // A mesura que anem rebent respostes del reducer (tuples K2, V3) les anem afegint al Map del resultatfinal i
+      // descomptem reducers pendents. Tornem a necessitar anotar el tipus.
     case fromReducer(entradaDictionari:(K2,V3)) =>
       resultatFinal += (entradaDictionari._1 -> entradaDictionari._2 )
       reducersPendents -= 1
@@ -128,7 +134,7 @@ class MapReduce[K1,V1,K2,V2,V3](
       // En arribar a 0, mostrem el resultat
       if (reducersPendents == 0) {
         println("All Done from Reducers! Showing RESULTS!!!")
-        for ((s,lf)<- resultatFinal) println(s+" -> " + lf)
+        for ((k,v)<- resultatFinal) println(k+" -> " + v)
 
       }
   }
@@ -185,8 +191,10 @@ object Main extends App {
     }
 
   val systema = ActorSystem("sistema")
-println("Llencem l'index invertit")
- val indexinvertit = systema.actorOf(Props(new MapReduce[File,String,String,File,Set[File]](fitxers,mappingInvInd,reducingInvInd)), name = "masterinv")
+  println("Llencem l'index invertit")
+  // Al crear l'actor MapReduce no cal passar els tipus com a paràmetres ja que amb els propis paràmetres dels constructor SCALA ja pot inferir els tipus.
+  //  val indexinvertit = systema.actorOf(Props(new MapReduce[File,String,String,File,Set[File]](fitxers,mappingInvInd,reducingInvInd)), name = "masterinv")
+  val indexinvertit = systema.actorOf(Props(new MapReduce(fitxers,mappingInvInd,reducingInvInd)), name = "masterinv")
 
 
 
@@ -203,10 +211,20 @@ println("Llencem l'index invertit")
     }
 
   println("Llencem el wordCount")
-  val wordcount = systema.actorOf(Props(new MapReduce[File,String,String,Int,Int](fitxers,mappingWC,reducingWC )), name = "mastercount")
+  //val wordcount = systema.actorOf(Props(new MapReduce[File,String,String,Int,Int](fitxers,mappingWC,reducingWC )), name = "mastercount")
+  val wordcount = systema.actorOf(Props(new MapReduce(fitxers,mappingWC,reducingWC )), name = "mastercount")
 
 
+/*
 
+EXERCICIS:
+
+Useu el MapReduce per saber quant ha gastat cada persona.
+
+Useu el MapReduce per saber qui ha fet la compra més cara a cada supermercat
+
+Useu el MapReduce per saber quant s'ha gastat cada dia a cada supermercat.
+ */
 
 
   println("tot enviat, esperant... a veure si triga en PACO")
