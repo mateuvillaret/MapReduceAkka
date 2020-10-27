@@ -1,7 +1,6 @@
-//package main
+
 import java.io.File
-//import scala.language.postfixOps
-import akka.actor
+
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 
 
@@ -56,9 +55,9 @@ class MapReduce[K1,V1,K2,V2,V3](
 
   var num_files_mapper = 0
   // dict serà el diccionari amb el resultat intermedi
-  var dict = Map[K2, List[V2]]() withDefaultValue(List())
+  var dict: Map[K2, List[V2]] = Map[K2, List[V2]]() withDefaultValue List()
   // resultatFinal recollirà les respostes finals dels reducers
-  var resultatFinal = Map[K2, V3]()
+  var resultatFinal: Map[K2, V3] = Map()
 
 
   // farem un mapper per parella (K1,List[V1]) de l'input
@@ -73,7 +72,7 @@ class MapReduce[K1,V1,K2,V2,V3](
   // a Props sino que creem l'actor amb els paràmetres que necessita. En aquest cas, l'Actor mapping és paramètric en tipus
   // i necessita com a paràmetre una funció de mapping.
 
-  val mappers = for (i <- 0 until nmappers) yield {
+  val mappers: Seq[ActorRef] = for (i <- 0 until nmappers) yield {
     context.actorOf(Props(new Mapper(mapping)), "mapper" + i)
   }
   // No és necessari passar els tipus K1,V1, ... ja que els infereix SCALA pel paràmetre mapping
@@ -120,7 +119,7 @@ class MapReduce[K1,V1,K2,V2,V3](
 
           // Ara enviem a cada reducer una clau de tipus V2 i una llista de valors de tipus K2. Les anotacions de tipus
           // no caldrien perquè ja sabem de quin tipus és dict.
-          for ((i,(key:K2, lvalue:List[V2])) <-  (0 to nreducers-1) zip dict)
+          for ((i,(key:K2, lvalue:List[V2])) <-  (0 until nreducers) zip dict)
             reducers(i) ! toReducer(key, lvalue)
           println("All sent to Reducers")
         }
@@ -201,7 +200,7 @@ object Main extends App {
 
   def mappingWC(tupla:(File, List[String])) :List[(String, Int)] =
     tupla match {
-      case (file, words) =>
+      case (_, words) =>
         for (word <- words) yield (word, 1) // Canvi file per 1
     }
 
