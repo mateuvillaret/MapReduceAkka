@@ -209,6 +209,7 @@ object Main extends App {
       case (word, nums) => (word, nums.sum)
     }
 
+
   println("Llencem el wordCount")
   //val wordcount = systema.actorOf(Props(new MapReduce[File,String,String,Int,Int](fitxers,mappingWC,reducingWC )), name = "mastercount")
   val wordcount = systema.actorOf(Props(new MapReduce(fitxers,mappingWC,reducingWC )), name = "mastercount")
