@@ -207,6 +207,8 @@ println("Llencem l'index invertit")
 
 
 
+
+
   println("tot enviat, esperant... a veure si triga en PACO")
 
 }
