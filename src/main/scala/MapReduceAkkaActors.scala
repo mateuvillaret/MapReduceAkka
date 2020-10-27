@@ -93,69 +93,6 @@ object Main extends App {
 }
 
 
-
-
-
-
-
-
-
-
-
-/*
-
-
-  // Input:  List[(File, List[String])]
-
-  // Part del Mapping:  List[(File, List[String])] => List[List[(String, Int)]]
-
-  // La funció que se li passa al map per fer el WordCount te per tipus: (File, List[String]) => List[(String, Int)]
-
-  // --------------------------------------------------> Canvi File per Int
-  def mapping(tupla:(File, List[String])) :List[(String, Int)] =
-      tupla match {
-        case (file, words) =>
-          for (word <- words) yield (word, 1) // Canvi file per 1
-      }
-
-  // Part del map del MapReduce
-  // --------------------------> Canvi de File per Int
-  val inter: List[List[(String, Int)]] = fitxers.map(mapping)
-
-  println("------------RESULTAT del MAP --------------")
-  inter.map(println)
-
-  // Part intermitja del MapReduce
-  // Map[String,List[Int]]
-  // Canvi File per Int ---^>
-  var dict:Map[String,List[Int]] = Map().withDefault(k=>List())
-  for( (w, f)<- inter.flatten) dict += (w->(f::dict(w)))
-
-  // Canvi File per Int --------------->   -------------------->
-  // Part del Reducing: Map[String,List[Int]] => Map[String,Set[Int]]
-
-  // Canvi File per Int --------------------------------------->   -------------------->
-  // la funció que farà el reducing te per tipus: (String,List[Int]) => (String,Set[Int])
-  def reducing(tupla:(String,List[Int])):(String,Int) =
-    tupla match {
-      case (word, nums) => (word, nums.sum)
-    }
-
-  // Es fa un "reducing" a cada element del MAP.
-  // --------------------> [File] -> Int
-  var result: Map[String, Int] = dict.map(reducing)
-
-  println("------------- RESULTAT FINAL DEL MAPREDUCE ----------------")
-  // Veiem Com ha quedat el resultat final
-  result.map(println)
-
-
-  println("tot enviat, esperant... a veure si triga en PACO")
-
-}
-
- */
-
 // Excerpt from MapReduce paper.
 // We realized that most of our computations involved applying a map operation to each logical “record”
 // in our input in order to compute a set of intermediate key/value pairs, and then
