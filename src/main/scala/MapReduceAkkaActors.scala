@@ -223,7 +223,7 @@ object exampleMapreduce extends App {
 
   // funcions per poder fer un word count
   def mappingWC(file:File, words:List[String]) :List[(String, Int)] =
-    for (word <- words) yield (word, 1) // Canvi file per 1
+    for (word <- words) yield (word, 1)
 
   def reducingWC(word:String, nums:List[Int]):(String,Int) =
     (word, nums.sum)
