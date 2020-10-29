@@ -12,7 +12,7 @@ import akka.actor.{ActorSystem,Actor, ActorRef, Props}
 // Les case class hauran de polimòrfiques en les "claus" i "valors" que s'utilitzen
 // ja que  el MapReduce també serà polimòrfic, sinó, perdríem la genericitat.
 
-case class MapReduceCompute() //to start computation and get its sender
+case class MapReduceCompute()
 case class toMapper[K1,V1](fitxer: K1, text: List[V1])
 case class fromMapper[K2,V2](intermig: List[(K2,V2)])
 case class toReducer[K2,V2](word:K2, fitxers:List[V2])
@@ -28,8 +28,6 @@ class Mapper[K1,V1,K2,V2](mapping:(K1,List[V1]) => List[(K2,V2)]) extends Actor 
     // i el tipus del valor al missatge toMapper
     case toMapper(clau:K1,valor:List[V1])=>
       sender ! fromMapper(mapping(clau,valor))
-    // xivato per seguir l'evolució
-    // println("Work Done by Mapper")
   }
 }
 
@@ -39,7 +37,6 @@ class Reducer[K2,V2,V3](reducing:(K2,List[V2])=> (K2,V3)) extends Actor {
     // cal anotar també la clau i el valor com hem fet amb els mappers
     case toReducer(clau:K2,valor:List[V2])=>
       sender ! fromReducer(reducing(clau, valor))
-    // println("Work Done by Reducer")
   }
 }
 
@@ -74,18 +71,12 @@ class MapReduce[K1,V1,K2,V2,V3](
 
   def receive: Receive = {
 
-    // Anem rebent les respostes dels mappers i les agrupem al diccionari per clau.
-
-    // Tornem a necessitar anotar els tipus del paràmetre que reb fromMapper tal com ho hem fet
-    // o be en el codi comentat al generar les tuples.
-
+    // En rebre el missatge MapReduceCompute engeguem el procés.
     case MapReduceCompute() =>
       println("Hem rebut lencarrec")
-      client=sender()
-      println(sender().toString())
+      client = sender() // Ens apuntem qui ens ha fet l'encàrrec per enviar-li el missatge més tard.
 
-      Thread.sleep(5000)
-      // farem un mapper per parella (K1,List[V1]) de l'input
+       // farem un mapper per parella (K1,List[V1]) de l'input
 
       nmappers = input.length
 
@@ -93,7 +84,7 @@ class MapReduce[K1,V1,K2,V2,V3](
 
       // Al crear actors a dins d'altres actors, enlloc de crear el ActorSystem utilitzarem context i així es va
       // organitzant la jerarquia d'actors.
-      // D'altra banda, quan els actors que creen tenen un contructor amb paràmetre, no passem el "tipus" de l'actor i prou
+      // D'altra banda, quan els actors que creem tenen un contructor amb paràmetre, no passem el "tipus" de l'actor i prou
       // a Props sino que creem l'actor amb els paràmetres que necessita. En aquest cas, l'Actor mapping és paramètric en tipus
       // i necessita com a paràmetre una funció de mapping.
 
@@ -118,12 +109,14 @@ class MapReduce[K1,V1,K2,V2,V3](
       println("All sent to Mappers, now start listening...")
 
 
+    // Anem rebent les respostes dels mappers i les agrupem al diccionari per clau.
+    // Tornem a necessitar anotar els tipus del paràmetre que reb fromMapper tal com ho hem fet
+    // o be en el codi comentat al generar les tuples.
 
     case fromMapper(list_clau_valor:List[(K2,V2)]) =>
-      //for ((word:K2, file:V2) <- list_string_file)
-      for ((clau, valor) <- list_clau_valor)
+       for ((clau, valor) <- list_clau_valor)
         dict += (clau -> (valor :: dict(clau)))
-      // Ja falta un mapper menys...
+
       mappersPendents -= 1
 
       // Quan ja hem rebut tots els missatges dels mappers:
@@ -132,43 +125,35 @@ class MapReduce[K1,V1,K2,V2,V3](
         // creem els reducers, tants com entrades al diccionari; fixeu-vos de nou que fem servir context i fem el new
         // pel constructor del Reducer amb paràmetres
         nreducers = dict.size
-        reducersPendents = nreducers
+        reducersPendents = nreducers // actualitzem els reducers pendents
         val reducers = for (i <- 0 until nreducers) yield
+           context.actorOf(Props(new Reducer(reducing)), "reducer"+i)
+          // No cal anotar els tipus ja que els infereix de la funció reducing
           //context.actorOf(Props(new Reducer[K2,V2,V3](reducing)), "reducer"+i)
-          context.actorOf(Props(new Reducer(reducing)), "reducer"+i)
 
         // Ara enviem a cada reducer una clau de tipus V2 i una llista de valors de tipus K2. Les anotacions de tipus
-        // no caldrien perquè ja sabem de quin tipus és dict.
+        // no caldrien perquè ja sabem de quin tipus és dict, però ens ajuden a documentar.
         for ((i,(key:K2, lvalue:List[V2])) <-  (0 until nreducers) zip dict)
           reducers(i) ! toReducer(key, lvalue)
         println("All sent to Reducers")
       }
 
-    // A mesura que anem rebent respostes del reducer (tuples K2, V3) les anem afegint al Map del resultatfinal i
+    // A mesura que anem rebent respostes del reducer, tuples (K2, V3), les anem afegint al Map del resultatfinal i
     // descomptem reducers pendents. Tornem a necessitar anotar el tipus.
     case fromReducer(entradaDictionari:(K2,V3)) =>
       resultatFinal += entradaDictionari
       reducersPendents -= 1
 
 
-      // En arribar a 0, mostrem el resultat
+      // En arribar a 0 enviem a qui ens ha encarregat el MapReduce el resultat. De fet l'està esperant pq haurà fet un ask.
       if (reducersPendents == 0) {
         client ! resultatFinal
         println("All Done from Reducers!")
-        //for ((k,v)<- resultatFinal) println(k+" -> " + v)
 
       }
   }
 
 }
-
-
-
-
-
-
-
-
 
 
 object exampleMapreduce extends App {
@@ -194,7 +179,7 @@ object exampleMapreduce extends App {
     (f7, List("hola", "no", "pas", "adeu")),
     (f8, List("ahh", "molt", "be", "adeu")))
 
-
+  // Dades per a fer els exercicis del final...
   val compres: List[(String,List[(String,Double, String)])] = List(
     ("bonpeu",List(("pep", 10.5, "1/09/20"), ("pep", 13.5, "2/09/20"), ("joan", 30.3, "2/09/20"), ("marti", 1.5, "2/09/20"), ("pep", 10.5, "3/09/20"))),
     ("sordi", List(("pep", 13.5, "4/09/20"), ("joan", 30.3, "3/09/20"), ("marti", 1.5, "1/09/20"), ("pep", 7.1, "5/09/20"), ("pep", 11.9, "6/09/20"))),
@@ -208,17 +193,31 @@ object exampleMapreduce extends App {
   def mappingInvInd(file:File, words:List[String]) :List[(String, File)] =
     for (word <- words) yield (word, file)
 
-
   def reducingInvInd(word:String,lfiles:List[File]):(String,Set[File]) =
     (word, lfiles.toSet)
 
-
+  // ActorSystem per a crear els actors
   val systema: ActorSystem = ActorSystem("sistema")
 
-  // Al crear l'actor MapReduce no cal passar els tipus com a paràmetres ja que amb els propis paràmetres dels constructor SCALA ja pot inferir els tipus.
+  // Al crear l'actor MapReduce no cal passar els tipus com a paràmetres ja que amb els propis paràmetres dels constructor SCALA ja els pot inferir.
   //  val indexinvertit = systema.actorOf(Props(new MapReduce[File,String,String,File,Set[File]](fitxers,mappingInvInd,reducingInvInd)), name = "masterinv")
+  val indexinvertit = systema.actorOf(Props(new MapReduce(fitxers,mappingInvInd,reducingInvInd)), name = "masterinv")
 
-  //val indexinvertit = systema.actorOf(Props(new MapReduce(fitxers,mappingInvInd,reducingInvInd)), name = "masterinv")
+
+  implicit val timeout = Timeout(10000 seconds) // L'implicit permet fixar el timeout per a la pregunta que enviem al indexinvertit. És obligagori.
+  var futureresultInvertedIndex = indexinvertit ? MapReduceCompute()
+
+  println("Awaiting")
+  // En acabar el MapReduce ens envia un missatge amb el resultat
+  val indexinvertitresult:Map[String,List[File]] = Await.result(futureresultInvertedIndex,Duration.Inf).asInstanceOf[Map[String,List[File]]]
+
+
+  println("Results Inverted Index Obtained")
+  for(v<-indexinvertitresult) println(v)
+
+
+
+
 
 
 
@@ -226,13 +225,13 @@ object exampleMapreduce extends App {
   def mappingWC(file:File, words:List[String]) :List[(String, Int)] =
     for (word <- words) yield (word, 1) // Canvi file per 1
 
-
   def reducingWC(word:String, nums:List[Int]):(String,Int) =
     (word, nums.sum)
 
 
   println("Creem l'actor MapReduce per fer el wordCount")
-  //val wordcount = systema.actorOf(Props(new MapReduce[File,String,String,Int,Int](fitxers,mappingWC,reducingWC )), name = "mastercount")
+  // Al crear l'actor MapReduce no cal passar els tipus com a paràmetres ja que amb els propis paràmetres dels constructor SCALA ja els pot inferir.
+  // val wordcount = systema.actorOf(Props(new MapReduce[File,String,String,Int,Int](fitxers,mappingWC,reducingWC )), name = "mastercount")
   val wordcount = systema.actorOf(Props(new MapReduce(fitxers,mappingWC,reducingWC )), name = "mastercount")
 
   // Els Futures necessiten que se'ls passi un temps d'espera, un pel future i un per esperar la resposta.
@@ -243,12 +242,12 @@ object exampleMapreduce extends App {
   // Enviem un missatge com a pregunta (? enlloc de !) per tal que inicii l'execució del MapReduce del wordcount.
   //var futureresutltwordcount = wordcount.ask(mapreduce.MapReduceCompute())(100000 seconds)
 
-  implicit val timeout = Timeout(10000 seconds) // L'implicit permet fixar el timeout per a la pregunta que enviem al wordcount. És obligagori.
-  var futureresutltwordcount = wordcount ? MapReduceCompute()
+ // implicit val timeout = Timeout(10000 seconds) // L'implicit permet fixar el timeout per a la pregunta que enviem al wordcount. És obligagori.
+  var futureresultwordcount = wordcount ? MapReduceCompute()
 
   println("Awaiting")
   // En acabar el MapReduce ens envia un missatge amb el resultat
-  val wordCountResult:Map[String,Int] = Await.result(futureresutltwordcount,Duration.Inf).asInstanceOf[Map[String,Int]]
+  val wordCountResult:Map[String,Int] = Await.result(futureresultwordcount,Duration.Inf).asInstanceOf[Map[String,Int]]
 
 
   println("Results Obtained")
@@ -259,6 +258,8 @@ object exampleMapreduce extends App {
   systema.terminate()
   println("ended shutdown")
   // com tancar el sistema d'actors.
+
+
   /*
 
   EXERCICIS:
