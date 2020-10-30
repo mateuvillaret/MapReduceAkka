@@ -150,7 +150,9 @@ class MapReduce[K1,V1,K2,V2,V3](
       if (reducersPendents == 0) {
         client ! resultatFinal
         println("All Done from Reducers!")
-
+        // Ara podem alliberar els recursos dels actors, el propi MapReduce, tots els mappers i els reducers.
+        // Fixem-nos que no te sentit que tornem a engegar "aquest mateix" MapReduce.
+        context.stop(self)
       }
   }
 
@@ -212,13 +214,16 @@ object exampleMapreduce extends App {
   // En acabar el MapReduce ens envia un missatge amb el resultat
   val indexinvertitresult:Map[String,List[File]] = Await.result(futureresultInvertedIndex,Duration.Inf).asInstanceOf[Map[String,List[File]]]
 
+  // Tal com hem fet el MapReduce ara ja sabem que indexinvertitresult ja ha estat aturat (hem fet al final del mapreduce després d'enviar la resposta, un stop).
+  // Si no ho haguéssim fet desde el propi ator MapReduce, també podríem  aturar l'actor i els seus descendents desde aquí:
+  // println("Stopping: " + indexinvertit.path.name )
+  // systema.stop(indexinvertit)
+
 
   println("Results Inverted Index Obtained")
   for(v<-indexinvertitresult) println(v)
 
-  // Podem aturar l'actor i els seus descendents amb un stop
-  println("Stopping: " + indexinvertit.path.name )
-  systema.stop(indexinvertit)
+
 
 
 
@@ -252,9 +257,9 @@ object exampleMapreduce extends App {
   // En acabar el MapReduce ens envia un missatge amb el resultat
   val wordCountResult:Map[String,Int] = Await.result(futureresultwordcount,Duration.Inf).asInstanceOf[Map[String,Int]]
 
-  // També podem aturar un actor enviant-li un missatge de destruccio:
-  println("Poisoning: " + wordcount.path.name )
-  wordcount ! PoisonPill
+  // Una alternativa per aturar un actor és també enviant-li un missatge de destrucció:
+  // println("Poisoning: " + wordcount.path.name )
+  // wordcount ! PoisonPill
 
   println("Results Obtained")
   for(v<-wordCountResult) println(v)
