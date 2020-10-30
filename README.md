@@ -1,18 +1,13 @@
 # MapReduceAkka
 
-En aquest repositori estudiarem el patró map-reduce.
+En aquesta branca donem la versió polimòrfica i general del Map Reduce i n'ilustrem el seu us amb els casos de l'Inverted Index i el Word Count.
 
-Partiré de dos exemples originals com són wordcount i inverted index i els generalitzarem utilitzant una funció polimórfica i d'ordre superior que anomenarem map-reduce.
+Cal destacar algun aspecte:
 
-També veure com paralelitzar l'índex invertit a la map-reduce amb actors i akka.
+* utilitzar un actor com una funció (és a dir, que ens pugui "retornar" un resultat) no entra molt directament dins la filosofia d'Actors. Per tant usarem un patró, el patró Ask, que ens permetrà des del programa principal enviar un missatge "en forma de pregunta" (usant ? enlloc de !) i poder esperar la resposta (com a Future amb un timeout).
+* hem simplificat els tipus de les funcions de mapping i reducing i ara enlloc de rebre tuples reben dos paràmetres.
+* no està fet el balanceig de càrrega ni el control de fallades.
 
-Exploreu successivament les següents branques:
 
-* a la branca [IndexInvertitSequencial](https://github.com/mateuvillaret/MapReduceAkka/tree/IndexinvertitSequencial) trobem una versió funcional d'index invertit i la seva reescriptura cap al map-reduce.
-* a la branca [WordCountSequencial](https://github.com/mateuvillaret/MapReduceAkka/tree/WordCountSequencial) trobem una versió funcional del word count i la seva reescriptura cap al map-reduce. 
-* a la branca [MapReduceSequencialAbstracte](https://github.com/mateuvillaret/MapReduceAkka/tree/MapReduceSequencialAbstracte)  trobem una versió del map-reduce abstracta, concretament definim una funció polimórfica i d'ordre superior que implementa el map-reduce i implementem el word count i l'index invertit fent servir aquesta funció.
-* finalment a la branca [main](https://github.com/mateuvillaret/MapReduceAkka/tree/main) trobem l'index invertit a la map-reduce amb actors i akka.
-
-**Es podria generalitzar aquest index invertit amb actors i akka (com la branca [main](https://github.com/mateuvillaret/MapReduceAkka/tree/main)) tal com hem fet en la versio sequencial (branca [MapReduceSequencialAbstracte](https://github.com/mateuvillaret/MapReduceAkka/tree/MapReduceSequencialAbstracte))?**
-
+Llegiu els comentaris del codi per acabar d'entendre'l adequadament.
 
