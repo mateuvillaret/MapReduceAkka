@@ -25,7 +25,8 @@ object Main extends App {
     (f7, List("hola", "no", "pas", "adeu")),
     (f8, List("ahh", "molt", "be", "adeu")))
 
-
+  // A continuació definim el que seria una funció d'ordre superior i polimòrfica per simular el MapReduce de forma seqencial.
+  // La instanciació dels tipus en el cas del Word Count seria aquesta
  /* def mapReduce(
                  input: List[(File, List[String])],
                  mapping: ((File, List[String])) => List[(String, Int)],
@@ -48,13 +49,14 @@ object Main extends App {
   }
 
 // ------------- WORD COUNT ----------------
-
+// Hem de definir la funció de mapping
   def mappingWC(tupla:(File, List[String])) :List[(String, Int)] =
     tupla match {
       case (file, words) =>
         for (word <- words) yield (word, 1) // Canvi file per 1
     }
 
+  // i la de reducing
   def reducingWC(tupla:(String,List[Int])):(String,Int) =
     tupla match {
       case (word, nums) => (word, nums.sum)
@@ -66,6 +68,7 @@ object Main extends App {
 
 
 // ------------- INVERTED INDEX -------------
+  // el mateix per l'índex invertit
   def mappingInvInd(tupla:(File, List[String])) :List[(String, File)] =
     tupla match {
       case (file, words) =>
@@ -93,10 +96,3 @@ object Main extends App {
 }
 
 
-// Excerpt from MapReduce paper.
-// We realized that most of our computations involved applying a map operation to each logical “record”
-// in our input in order to compute a set of intermediate key/value pairs, and then
-// applying a reduce operation to all the values that shared the same key, in order to combine the
-// derived data appropriately.
-// Our use of a functional model with userspecified map and reduce operations allows us to parallelize
-// large computations easily
