@@ -1,13 +1,14 @@
 
 
 import java.io.File
+
 import akka.pattern.ask
 import akka.util.Timeout
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import akka.actor.{ActorSystem,Actor, ActorRef, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, PoisonPill, Props}
 
 // Les case class hauran de polimòrfiques en les "claus" i "valors" que s'utilitzen
 // ja que  el MapReduce també serà polimòrfic, sinó, perdríem la genericitat.
@@ -215,7 +216,9 @@ object exampleMapreduce extends App {
   println("Results Inverted Index Obtained")
   for(v<-indexinvertitresult) println(v)
 
-
+  // Podem aturar l'actor i els seus descendents amb un stop
+  println("Stopping: " + indexinvertit.path.name )
+  systema.stop(indexinvertit)
 
 
 
@@ -249,6 +252,9 @@ object exampleMapreduce extends App {
   // En acabar el MapReduce ens envia un missatge amb el resultat
   val wordCountResult:Map[String,Int] = Await.result(futureresultwordcount,Duration.Inf).asInstanceOf[Map[String,Int]]
 
+  // També podem aturar un actor enviant-li un missatge de destruccio:
+  println("Poisoning: " + wordcount.path.name )
+  wordcount ! PoisonPill
 
   println("Results Obtained")
   for(v<-wordCountResult) println(v)
